@@ -1,7 +1,7 @@
 # Kubernetes
 iniciado em 10/03/2022
 
-terminado em ANDAMENTO
+terminado em 07/04/2022
 
 [certificate]() 
 [certificate]() 
@@ -146,15 +146,28 @@ Table of contents
       - [StatefulSet](#statefulset)
       - [Criar um StetefulSet](#criar-um-stetefulset)
     - [utilizando um StatefulSet](#utilizando-um-statefulset)
+      - [Default StorageClass](#default-storageclass)
     - [o que aprendemos?](#o-que-aprendemos-8)
     - [conhecendo probes](#conhecendo-probes)
+      - [Liveness Probes](#liveness-probes)
     - [utilizando Liveness Probes](#utilizando-liveness-probes)
+      - [qual status code o kubernetes considera como a aplicaçao esta saudavel?](#qual-status-code-o-kubernetes-considera-como-a-aplicaçao-esta-saudavel)
     - [Utilizando Readiness Probes](#utilizando-readiness-probes)
+      - [Readines Probes](#readines-probes)
     - [Para Saber Mais: Startup Probes](#para-saber-mais-startup-probes)
     - [o que aprendemos?](#o-que-aprendemos-9)
     - [Escalando pods automaticamente - Horizontal Pod Autoscaler](#escalando-pods-automaticamente---horizontal-pod-autoscaler)
+      - [Horizontal Pod Autoscaler](#horizontal-pod-autoscaler)
+      - [criando um Horizontal Pod Autoscaler](#criando-um-horizontal-pod-autoscaler)
+      - [kubectl get hpa](#kubectl-get-hpa)
     - [utilizando o HPA no windows](#utilizando-o-hpa-no-windows)
+      - [flag --kubelet-insecure-tls](#flag---kubelet-insecure-tls)
+      - [stress test](#stress-test)
     - [Utilizando o HPA no linux](#utilizando-o-hpa-no-linux)
+      - [minikube addons list](#minikube-addons-list)
+      - [minikube addons enable metrics-server](#minikube-addons-enable-metrics-server)
+    - [Para saber mais: VerticalPodAutoscaler](#para-saber-mais-verticalpodautoscaler)
+    - [o que aprendemos?](#o-que-aprendemos-10)
   
 
 https://www.alura.com.br/artigos/o-que-e-kubernetes
@@ -4817,81 +4830,193 @@ Apesar do nosso Stateful Set estar cadastrado, feito aqui da maneira certa, nós
 Mas, vocês vão ver que nós vamos resolver isso de uma maneira bem mais elegante através do nosso Storage Class.
 
 ### utilizando um StatefulSet
-[00:00] O que aconteceu? Além de nós termos perdido as nossas imagens, nós também perdemos a nossa sessão. Quando nós tentamos acessar a aplicação novamente ele pede para nós nos autenticarmos.
+O que aconteceu? 
 
-[00:13] Então, nós precisamos ter duas maneiras de persistir, uma as nossas imagens e outra a nossa sessão.
+Além de nós termos perdido as nossas imagens, nós também perdemos a nossa sessão. 
 
-[00:21] E se nós olharmos aqui mais uma vez na nossa apresentação, isso significa que nós precisamos criar um Persistent Volume Claim para um Persistent Volume que vai armazenar as nossas imagens e um Persistent Volume Claim que vai permitir o acesso com Persistent Volume que vai armazenar a nossa sessão.
+Quando nós tentamos acessar a aplicação novamente ele pede para nós nos autenticarmos.
 
-[00:38] Então, vamos lá e vamos criar esses Persistent Volume Claim, clicando no botão “New File”, no canto superior esquerdo. Eu vou chamar o primeiro de imagem-pvc.yaml e dentro dele nós vamos definir o que nós já sabemos, a versão da api vai ser a v1, o tipo do que nós queremos criar é um PersistentVolumeClaim.
+Então, nós precisamos ter duas maneiras de persistir, uma as nossas imagens e outra a nossa sessão.
 
-[01:01] E precisamos colocar, também, o nosso metadata, que vamos colocar um nome chamado imagens-pvc. Nas especificações dele vamos colocar o modo de acesso onde vamos definir como ReadWriteOnce, para um acesso por vez.
+E se nós olharmos aqui mais uma vez na nossa apresentação, isso significa que nós precisamos criar um Persistent Volume Claim para um Persistent Volume que vai armazenar as nossas imagens e um Persistent Volume Claim que vai permitir o acesso com Persistent Volume que vai armazenar a nossa sessão.
 
-[01:21] E em resources nós vamos definir o que? O quanto nós pedimos de acesso, de armazenamento. Eu quero colocar, por exemplo, 1 giga.
+Então, vamos lá e vamos criar esses Persistent Volume Claim. Eu vou chamar o primeiro de imagem-pvc.yaml e dentro dele nós vamos definir o que nós já sabemos, a versão da api vai ser a v1, o tipo do que nós queremos criar é um PersistentVolumeClaim.
 
-[01:35] Temos a definição do nosso imagens-pvc e precisamos agora criar um arquivo para a nossa sessão.
+E precisamos colocar, também, o nosso metadata, que vamos colocar um nome chamado imagens-pvc. 
 
-[01:41] Vou chamar sessao-pvc.yaml e só vou trocar o nome do metadata de imagens-pvc para sessão-pvc. A ideia do resto é a mesma coisa, ReadWriteOnce com um armazenamento de 1 gigabyte.
+Nas especificações dele vamos colocar o modo de acesso onde vamos definir como ReadWriteOnce, para um acesso por vez.
 
-[01:56] Agora eu já tenho os meus dois Persistent Volume Claim, e preciso utilizá-los no meu Pod para que os meus containers, aqui no caso o meu único container, tenha acesso a este Volume que nós vamos utilizar.
+E em resources nós vamos definir o que? O quanto nós pedimos de acesso, de armazenamento. Eu quero colocar, por exemplo, 1 giga.
 
-[02:09] E nós já sabemos fazer isso, alinhado aqui com o nosso envFrom, nós vamos falar que o nosso container vai montar um Volume que vai se chamar, no caso, eu vou dar o nome quando nós declararmos ele de imagens e o caminho que nós queremos montar dentro do nosso container vai ser para o caminho que ele tem as nossas imagens.
+```
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: imagens-pvc
+spec:
+  accessModes: 
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+```
 
-[02:32] Que nós vimos que é /var/www/html/uploads que nós vimos dentro do nosso exec.
+Temos a definição do nosso imagens-pvc e precisamos agora criar um arquivo para a nossa sessão.
 
-[02:42] Então, eu vou até colocar no Powershell o nosso exec mais uma vez e nós temos nele o nosso uploads que é a pasta que nós temos as nossas imagens.
+Vou chamar sessao-pvc.yaml e só vou trocar o nome do metadata de imagens-pvc para sessão-pvc. A ideia do resto é a mesma coisa, ReadWriteOnce com um armazenamento de 1 gigabyte.
 
-[02:52] E agora nós precisamos fazer a mesma coisa para sessão, então vamos criar, montar um outro Volume que vai ser para a sessão e ele vai estar em /tmp como nós vimos em uploads.
+```
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sessao-pvc
+spec:
+  accessModes: 
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+```
 
-[03:05] Então cd/tnt vai ser armazenado na nossa sessão.
+Agora eu já tenho os meus dois Persistent Volume Claim, e preciso utilizá-los no meu Pod para que os meus containers, aqui no caso o meu único container, tenha acesso a este Volume que nós vamos utilizar.
 
-[03:11] Falamos que o nosso container quer montar esses dois Volumes dentro dele, mas nós precisamos definir esses Volumes, como nós vimos. Alinhado com os nossos containers nós precisamos definir, nas especificações desse Pod, que ele vai ter esse Volume.
+E nós já sabemos fazer isso, alinhado aqui com o nosso envFrom, nós vamos falar que o nosso container vai montar um Volume que vai se chamar, no caso, eu vou dar o nome quando nós declararmos ele de imagens e o caminho que nós queremos montar dentro do nosso container vai ser para o caminho que ele tem as nossas imagens.
 
-[03:31] Um deles nós já sabemos o nome que é imagens e ele vai utilizar um Persistent Volume Claim para ele poder acessar este Volume e o nome dele, o nome deste Claim é o nosso imagens-pvc.
+Que nós vimos que é /var/www/html/uploads que nós vimos dentro do nosso exec.
 
-[03:50] A mesma coisa vai acontecer para a nossa sessão, então, vamos ter um Volume chamado sessão, o nosso Persistent Volume Claim e o Persistent Volume Claim dele é sessao-pvc.
+Então, eu vou até colocar no Powershell o nosso exec mais uma vez e nós temos nele o nosso uploads que é a pasta que nós temos as nossas imagens.
 
-[04:04] Então, salvamos isso e a ideia agora é a seguinte, nós precisamos criar este Persistent Volume Claim para que nós possamos criar o nosso Stateful Set. Então, vamos lá.
+E agora nós precisamos fazer a mesma coisa para sessão, então vamos criar, montar um outro Volume que vai ser para a sessão e ele vai estar em /tmp como nós vimos em uploads.
 
-[04:17] Vou abrir o nosso terminal do Powershell, mais uma vez, e vou aplicar e vou criar esses dois Persistent Volume Claim, o nosso imagens-pvc e o nosso sessao-pvc.
+Então cd/tmt vai ser armazenado na nossa sessão.
 
-[04:31] Então, se nós voltarmos na nossa apresentação, mais uma vez, o que nós temos já? Nós já temos o nosso Persistent Volume Claim e o nosso Pod. Falta o nosso Persistent Volume.
+Falamos que o nosso container quer montar esses dois Volumes dentro dele, mas nós precisamos definir esses Volumes, como nós vimos. Alinhado com os nossos containers nós precisamos definir, nas especificações desse Pod, que ele vai ter esse Volume.
 
-[04:43] Mas, vamos dar uma olhada no Powershell. Eu tenho um comando para isso, kubectl get pvc o que ele está falando? Vamos lembrar, ele está falando que eu tenho esses dois PVC, que eu realmente criei, mas, o que é mais importante além dele bater com as configurações que eu defini aqui é que ele já está com status de bound, ele já fez ligação com algum volume.
+Um deles nós já sabemos o nome que é imagens e ele vai utilizar um Persistent Volume Claim para ele poder acessar este Volume e o nome dele, o nome deste Claim é o nosso imagens-pvc.
 
-[05:07] E ele tem o nome desse Volume, inclusive. Então, vamos comandar um kubectl get pv. Repara, ele criou dois Volumes, automaticamente, para nós.
+A mesma coisa vai acontecer para a nossa sessão, então, vamos ter um Volume chamado sessão, o nosso Persistent Volume Claim e o Persistent Volume Claim dele é sessao-pvc.
 
-[05:18] E como que ele fez isso? Exatamente, nós temos por padrão um Storage Class, o nosso cluster, assim como nós tínhamos lá no Google Cloud Platform, nosso cluster possui também um Storage Class padrão, que é um default aqui.
+```
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: sistema-noticias-statefulset
+spec:
+  replicas: 1
+  template: 
+    metadata: 
+      labels:
+        app: sistema-noticias
+      name: sistema-noticias
+    spec: 
+      containers:
+        - name: sistema-noticias-container
+          image: aluracursos/sistema-noticias:1
+          ports:
+            - containerPort: 80
+          envFrom:
+            - configMapRef:
+              name: sistema-configmap
+          volumeMounts:
+            - name: imagens
+              mountPath: /var/www/html/uploads
+            - name: sessao
+              mountPath: /tmp
+      volumes:
+        - name: imagens
+          persistentVolumeClaim:
+            claimName: imagens-pvc
+        - name: sessao
+          persistentVolumeClaim:
+            claimName: sessao-pvc
+  selector:
+    matchLabels:
+      app: sistema-noticias
+  serviceName: svc-sistema-noticias
+```
 
-[05:34] Então, se nós criarmos um Persistent Volume Claim sem definir qual volume nós queremos utilizar, ele vai utilizar o Storage Class para criar, dinamicamente, o nosso Persistent Volume.
+Então, salvamos isso e a ideia agora é a seguinte, nós precisamos criar este Persistent Volume Claim para que nós possamos criar o nosso Stateful Set. Então, vamos lá.
 
-[05:47] Então, olha que mágica, nós não precisamos nem nos preocupar nesse cenário em criar o nosso Persistent Volume manualmente, porque o próprio Storage Class está fazendo isso para nós.
+Vou abrir o nosso terminal do Powershell, mais uma vez, e vou aplicar e vou criar esses dois Persistent Volume Claim, o nosso imagens-pvc e o nosso sessao-pvc.
 
-[05:57] Isso, por si só, já é um grande adianto. Não é à toa que nós temos agora, graças ao dinamismo do Storage Class, a criação desses Volumes em demanda, conforme nós vamos tendo novos Persistent Volume Claim, ele vai criando novos Persistent Volumes para nós.
+```
+kubectl apply -f .\imagens-pvc.yaml
 
-[06:15] Isso é fantástico. Agora, finalmente, nós podemos aplicar o nosso sistema-noticias-statefulset.yaml, mas antes nós precisamos remover ele, porque ele já está em execução. Então, vamos remover ele e vamos aplicar apply, novamente.
+kubectl apply -f .\sessao-pvc.yaml
+```
+ 
+Então, se nós voltarmos na nossa apresentação, mais uma vez, o que nós temos já? Nós já temos o nosso Persistent Volume Claim e o nosso Pod. Falta o nosso Persistent Volume.
 
-[06:33] O que vai acontecer aqui? Ele foi criado e agora se nós voltarmos na nossa aplicação, vamos, mais uma vez, entrar no Portal de Notícias do site, digitar admin na aba “Usuário” e admin na aba “Senha”. Temos a nossa notícia anterior ainda, que nós tínhamos sem imagem quebrada. Vamos excluir ela e vamos cadastrar uma nova notícia, clicando no botão “Nova Notícia”.
+Mas, vamos dar uma olhada no Powershell. 
 
-[06:52] Vamos digitar ‘Uma notícia’ na aba “Título” e digitar ‘Um conteúdo’ na aba “Notícia”, mais uma vez, adicionando a imagem da Alura, clicando no botão “Escolher Arquivo”. Vou salvar, clicando no botão “Salvar” no canto inferior direito da janela. Se eu der um "F5", a princípio, tudo funcionando.
+Eu tenho um comando para isso, kubectl get pvc o que ele está falando? 
 
-[07:04] Vou criar uma nova notícia, vou chamar de ‘Outra notícia’, na aba “Título”, com “Outro conteúdo”, na aba “Notícia” e vou colocar agora a imagem da Caelum e vou salvar também. Se eu der um "F5" tudo, a princípio, funcionando.
+Vamos lembrar, ele está falando que eu tenho esses dois PVC, que eu realmente criei, mas, o que é mais importante além dele bater com as configurações que eu defini aqui é que ele já está com status de bound, ele já fez ligação com algum volume.
 
-[07:21] Agora, vamos fazer a real prova. Eu vou executar o comando kubectl get pods e vou dar um kubectl delete no nosso Pod do sistema-noticias-statefulset-0. E ele foi deletado.
+E ele tem o nome desse Volume, inclusive. 
 
-[07:42] Se nós acompanharmos, através de um outro aqui, que na verdade ele já até deletou, não precisamos acompanhar. Nós vamos dar um kubectl get pod mais uma vez, ele está criando.
+Então, vamos comandar um kubectl get pv. 
 
-[07:51] Então, vamos lá, "kubectl get pod --watch" ele está criando e criou, pronto, foi bem rápido de novo.
+Repara, ele criou dois Volumes, automaticamente, para nós.
 
-[07:58] Se nós dermos um "F5", estão as nossas notícias e as imagens. Se nós viermos aqui de novo e acessar o mesmo link, a nossa sessão foi persistida.
+E como que ele fez isso? 
 
-[08:09] Então, tudo continua funcionando da mesma maneira. Se nós voltarmos no nosso terminal e agora vou dar uma olhada mais específica, vou dar um kubectl describe pod e vamos descrever o nosso describe pod sistema-noticias-statefulset-0.
+#### Default StorageClass
+Exatamente, nós temos por padrão um Storage Class, o nosso cluster, assim como nós tínhamos lá no Google Cloud Platform, nosso cluster possui também um Storage Class padrão, que é um default aqui.
 
-[08:29] E o que nós temos, primeiro ele deu todo o problema para montar, mas, ele conseguiu montar depois sem nenhum problema e logo depois o que aconteceu? Ele fez o mapeamento para esse Volume usando o Persistent Volume Claim que nós definimos e não é ReadOnly. Todas as informações que nós definimos a mesma coisa para a nossa sessão.
+Então, se nós criarmos um Persistent Volume Claim sem definir qual volume nós queremos utilizar, ele vai utilizar o Storage Class para criar, dinamicamente, o nosso Persistent Volume.
 
-[08:55] Então, tudo funciona, todo o bind foi feito e agora nós temos a questão da persistência ao nosso lado, nós conseguimos salvar essas informações, por mais que o nosso Pod venha a falhar. Isso é muito legal.
+```diff
++ Nós não precisamos nem nos preocupar nesse cenário em criar o nosso Persistent Volume manualmente, porque o próprio Storage Class está fazendo isso para nós.
+```
 
-[09:09] Para essa parte de Volumes e persistência de dados, nós paramos por aqui e eu vejo vocês no próximo vídeo, na próxima aula, onde nós vamos falar sobre um novo conteúdo e eu vejo vocês lá. Até mais!
+Isso, por si só, já é um grande adianto. 
+
+Não é à toa que nós temos agora, graças ao dinamismo do Storage Class, a criação desses Volumes em demanda, conforme nós vamos tendo novos Persistent Volume Claim, ele vai criando novos Persistent Volumes para nós.
+
+Agora, finalmente, nós podemos aplicar o nosso sistema-noticias-statefulset.yaml, mas antes nós precisamos remover ele, porque ele já está em execução. 
+
+Então, vamos remover ele e vamos aplicar apply, novamente.
+
+```
+kubectl delete -f .\sistema-noticias-statefulset.yaml
+
+kubectl apply -f .\sistema-noticias-statefulset.yaml
+```
+
+O que vai acontecer aqui? 
+
+Ele foi criado e agora se nós voltarmos na nossa aplicação, vamos, mais uma vez, entrar no Portal de Notícias do site, digitar admin na aba “Usuário” e admin na aba “Senha”. 
+
+Temos a nossa notícia anterior ainda, que nós tínhamos sem imagem quebrada. 
+
+Vamos excluir ela e vamos cadastrar uma nova notícia, clicando no botão “Nova Notícia”.
+
+Vamos digitar ‘Uma notícia’ na aba “Título” e digitar ‘Um conteúdo’ na aba “Notícia”, mais uma vez, adicionando a imagem da Alura, clicando no botão “Escolher Arquivo”. Vou salvar, clicando no botão “Salvar” no canto inferior direito da janela. Se eu der um "F5", a princípio, tudo funcionando.
+
+Vou criar uma nova notícia, vou chamar de ‘Outra notícia’, na aba “Título”, com “Outro conteúdo”, na aba “Notícia” e vou colocar agora a imagem da Caelum e vou salvar também. Se eu der um "F5" tudo, a princípio, funcionando.
+
+Agora, vamos fazer a real prova. 
+
+Eu vou executar o comando kubectl get pods e vou dar um kubectl delete no nosso Pod do sistema-noticias-statefulset-0. E ele foi deletado.
+
+Nós vamos dar um kubectl get pod mais uma vez, ele está criando.
+
+Então, vamos lá, "kubectl get pod --watch" ele está criando e criou, pronto, foi bem rápido de novo.
+
+Se nós dermos um "F5", estão as nossas notícias e as imagens. 
+
+Se nós viermos aqui de novo e acessar o mesmo link, a nossa sessão foi persistida.
+
+Então, tudo continua funcionando da mesma maneira. 
+
+Se nós voltarmos no nosso terminal e agora vou dar uma olhada mais específica, vou dar um kubectl describe pod e vamos descrever o nosso describe pod sistema-noticias-statefulset-0.
+
+E o que nós temos, primeiro ele deu todo o problema para montar, mas, ele conseguiu montar depois sem nenhum problema e logo depois o que aconteceu? 
+
+Ele fez o mapeamento para esse Volume usando o Persistent Volume Claim que nós definimos e não é ReadOnly. Todas as informações que nós definimos a mesma coisa para a nossa sessão.
+
+Então, tudo funciona, todo o bind foi feito e agora nós temos a questão da persistência ao nosso lado, nós conseguimos salvar essas informações, por mais que o nosso Pod venha a falhar.
 
 ### o que aprendemos?
 * como criar PersistentVolumes dinamicamente com StorageClasses
@@ -4901,107 +5026,390 @@ Mas, vocês vão ver que nós vamos resolver isso de uma maneira bem mais elegan
 * clusters possuem StorageClasses 'default' e podem ser usados automaticamente se nao definirmos qual será utilizado
 
 ### conhecendo probes
-[00:00] Agora vamos falar de um tópico bem importante, mas, que ao mesmo tempo, vai ser bem fácil de entendermos e colocar a mão na massa. E, a questão agora é a seguinte: nós temos uma requisição que pode chegar para esse serviço e ele, nós sabemos, vai fazer o balanceamento de carga entre os três Pods que temos.
+Agora vamos falar de um tópico bem importante, mas, que ao mesmo tempo, vai ser bem fácil de entendermos e colocar a mão na massa. 
 
-[00:20] Vai chegar a requisição pro container dentro desse Pod, ele vai fazer algum processamento e vai exibir o resultado, seja uma página web, seja o retorno de alguma API, o que seja, tanto faz.
+E, a questão agora é a seguinte: 
 
-[00:31] E ele retorna o Status Code, por exemplo, de 200, que a requisição foi ok ou algum de 300 que seja um redirecionamento, qualquer coisa do tipo. Mas, o que importa é que o SVC pode balancear a carga entre qualquer um destes Pods.
+nós temos uma requisição que pode chegar para esse serviço e ele, nós sabemos, vai fazer o balanceamento de carga entre os três Pods que temos.
 
-[00:49] O que podemos acabar vendo acontecer? Em algum momento este Status Code recebido tem a possibilidade de ser um erro 500 ou algum erro de 404, de Not Found um erro interno no servidor de 500 e isso significa que a aplicação dentro deste Pod não está respondendo de maneira esperada. Ela não está funcionando da maneira que esperávamos.
+Vai chegar a requisição pro container dentro desse Pod, ele vai fazer algum processamento e vai exibir o resultado, seja uma página web, seja o retorno de alguma API, o que seja, tanto faz.
 
-[01:19] Mas, a pergunta que fica é: o Kubernetes sabe que o Pod está em funcionamento, mas, a aplicação dentro deste Pod não tem como saber, a princípio, se ele deve reiniciá-la ou não. Então, apesar do Pod estar saudável e funcionando, a aplicação dentro do container deste Pod não está respondendo da maneira esperada.
+E ele retorna o Status Code, por exemplo, de 200, que a requisição foi ok ou algum de 300 que seja um redirecionamento, qualquer coisa do tipo. 
 
-[01:42] Como assim? Vamos visualizar o caso do nosso portal de notícias. Eu vou abrir a abra do console do navegador e se eu recarregar a página vemos, por exemplo, que quando fazemos uma requisição para localhost 30 mil, recebemos um código de status 200, ou seja, a requisição foi ok.
+Mas, o que importa é que o SVC pode balancear a carga entre qualquer um destes Pods.
 
-[02:01] Tivemos tudo sem nenhum problema, mas, pode ser que se tivermos algum código de 400 pra cima e ali na faixa dos 500 também, essa aplicação não esteja respondendo da maneira esperada. Porque, ou nós tomamos um erro de Not Found ou um erro interno ou um Bad Request, qualquer outra coisa do tipo.
+O que podemos acabar vendo acontecer? 
 
-[02:21] E para resolver este tipo de problema, nós temos os Configure Liveness, Readiness e Startup Probes. Vamos falar sobre cada um deles, mas, nós vamos começar falando sobre o Liveness Probes, que é nada mais do que uma prova de vida que a aplicação dentro de um container de um Pod está funcionando.
+Em algum momento este Status Code recebido tem a possibilidade de ser um erro 500 ou algum erro de 404, de Not Found um erro interno no servidor de 500 e isso significa que a aplicação dentro deste Pod não está respondendo de maneira esperada. 
 
-[02:40] Então, o kubelet vai usar um Liveness Probe como um critério para saber quando reiniciar o container de um Pod. Então, quando cair em algum deadlock ou a aplicação está rodando, mas, incapaz de manter progresso. Os cenários que exibimos aqui, por exemplo.
+Ela não está funcionando da maneira que esperávamos.
 
-[02:55] E, nesse cenário , o que podemos fazer, o que podemos visualizar? O kubelet, que é aquele componente que mostrei pra vocês lá dos nossos nodes, eles são responsáveis por, através do nosso Liveness Probe, saber se a aplicação deve ser reiniciada ou não.
+Mas, a pergunta que fica é: 
 
-[03:15] Então, como que podemos informar ao kubelet utilizando os Liveness Probe, que essa aplicação deve ser retornada caso ela não tenha nenhum status favorável http.
+o Kubernetes sabe que o Pod está em funcionamento, mas, a aplicação dentro deste Pod não tem como saber, a princípio, se ele deve reiniciá-la ou não. 
 
-[03:26] Ele tem um pequeno guia para nós, mas, reparem que não precisamos declarar um arquivo só para o Liveness Probe. Dentro dele, da definição do nosso container, podemos definir qual é a prova de vida, como garantimos que este container dentro do nosso Pod está vivo.
+Então, apesar do Pod estar saudável e funcionando, a aplicação dentro do container deste Pod não está respondendo da maneira esperada.
 
-[03:44] Então, são essas perguntas que precisamos responder. No próximo vídeo vamos colocar a mão na massa e criar o nosso primeiro Liveness Probe, pra sabermos quando o nosso Pod já está pronto com o container dentro dele para ser reiniciado em caso de falhas.
+```diff
++ Apesar do pod estar saudavel, nossa aplicaçao dentro do container nao responde como esperado.
+```
 
-[04:01] Então, por esse vídeo é só, vamos parar por aqui, e no próximo começamos a pôr a mão na massa e eu vejo vocês lá. Até mais!
+como o kubernetes pode saber que o container dentro do pod deve ser reiniciado?
+
+Como assim? Vamos visualizar o caso do nosso portal de notícias. Eu vou abrir a abra do console do navegador e se eu recarregar a página vemos, por exemplo, que quando fazemos uma requisição para localhost:30000, recebemos um código de status 200, ou seja, a requisição foi ok.
+
+Tivemos tudo sem nenhum problema, mas, pode ser que se tivermos algum código de 400 pra cima e ali na faixa dos 500 também, essa aplicação não esteja respondendo da maneira esperada. Porque, ou nós tomamos um erro de Not Found ou um erro interno ou um Bad Request, qualquer outra coisa do tipo.
+
+E para resolver este tipo de problema, nós temos os Configure Liveness, Readiness e Startup Probes. 
+
+#### Liveness Probes
+Vamos falar sobre cada um deles, mas, nós vamos começar falando sobre o Liveness Probes, que é 
+```diff
++ nada mais do que uma prova de vida que a aplicação dentro de um container de um Pod está funcionando.
+```
+
+Então, o kubelet vai usar um Liveness Probe como um critério para saber quando reiniciar o container de um Pod. 
+
+Então, quando cair em algum deadlock ou a aplicação está rodando, mas, incapaz de manter progresso. 
+
+Os cenários que exibimos aqui, por exemplo.
+
+E, nesse cenário , o que podemos fazer, o que podemos visualizar? 
+
+O kubelet, que é aquele componente que mostrei pra vocês lá dos nossos nodes, eles são responsáveis por, através do nosso Liveness Probe, saber se a aplicação deve ser reiniciada ou não.
+
+Então, como que podemos informar ao kubelet utilizando os Liveness Probe, que essa aplicação deve ser retornada caso ela não tenha nenhum status favorável http.
+
+Ele tem um pequeno guia para nós, mas, reparem que não precisamos declarar um arquivo só para o Liveness Probe. 
+
+```diff
++ Dentro dele, da definição do nosso container, podemos definir qual é a prova de vida, como garantimos que este container dentro do nosso Pod está vivo.
+```
+
+Então, são essas perguntas que precisamos responder. 
 
 ### utilizando Liveness Probes
-[00:00] Pessoal, então, vamos colocar o nosso Liveness Probe. Qual vai ser o critério para considerarmos o container do nosso Pod do portal-noticias como saudável. É bem simples.
+Pessoal, então, vamos colocar o nosso Liveness Probe. 
 
-[00:12] Vamos definir um Liveness Probe e o que precisamos para definir? Eu vou definir que vamos fazer uma requisição utilizando o verbo get para um caminho em uma determinada porta.
+Qual vai ser o critério para considerarmos o container do nosso Pod do portal-noticias como saudável. É bem simples.
 
-[00:27] Qual é a porta que eu quero fazer o meu teste? Em que porta está sendo executado o meu portal de notícias? Na porta 30 mil? Na verdade, não. Porque como eu estou fazendo o teste no escopo do container, eu preciso colocar em que porta o meu container está executando essa aplicação e nós sabemos que ele está fazendo isso na porta 80.
+no portal-noticias-deployment.yaml, vamos definir um Liveness Probe e o que precisamos para definir? 
 
-[00:53] Então, dentro deste cenário, nós estamos fazendo o teste dentro do Pod que está executando o container e sua aplicação na porta 80. E qual é o caminho? Por exemplo, temos o nosso localhost:3000, nós temos, também, o nosso sistema de noticias com o nosso localhost:30001/inserir_noticias.php, então, nesse caso, se quiséssemos testar essa rota, nós definiríamos este caminho.
+Eu vou definir que vamos fazer uma requisição utilizando o verbo get para um caminho em uma determinada porta.
 
-[01:23] Mas, como estamos testando o nosso portal de notícias, simplesmente, vamos colocar o nosso localhost:30000 e como não temos um caminho auxiliar a esse, nós temos só o nosso principal, que é o localhost:30000, sem nada depois da barra, o nosso caminho nada mais é, simplesmente, do que barra.
+Qual é a porta que eu quero fazer o meu teste? 
 
-[01:46] E, agora, nós precisamos definir, também, o seguinte: de quanto em quanto tempo eu quero fazer este teste? Então, a cada quantos segundos eu quero executar esse teste? A cada 10 segundos eu quero fazer a validação deste container.
+Em que porta está sendo executado o meu portal de notícias? 
 
-[02:02] E qual é o número máximo de falhas que eu tolero para este teste antes dele executar o reinício do container. Então, qual é o meu Threshold o que eu tenho de limite para isso? Eu vou definir como três falhas sendo o número máximo, antes dele executar o reinício desse meu container.
+Na porta 30000? 
 
-[02:22] E, por fim, o que eu preciso definir também? Eu preciso informar a partir de qual momento ele vai começar a executar esses testes, porque o container subiu, mas, não necessariamente ele já está pronto para receber esses testes. Então, eu vou definir um atraso inicial de, por exemplo, 20 segundos antes dele começar a executar o primeiro teste.
+Na verdade, não. 
 
-[02:48] Então, o container vai subir depois de 20 segundos ele vai começar a executar este teste a cada 10 segundos. Mas, a pergunta que temos nesse momento é como que podemos definir qual é o nosso critério? Porque estamos fazendo um get na porta 80, mas, o que ele vai considerar como saudável ou não?
+Porque como eu estou fazendo o teste no escopo do container, eu preciso colocar em que porta o meu container está executando essa aplicação e nós sabemos que ele está fazendo isso na porta 80.
 
-[03:11] Se viermos na documentação, mais uma vez, do nosso Liveness Probe, nós vamos ver que ele tem um intervalo específico para considerar a aplicação saudável. Então, qualquer código html que seja igual ou maior a 200 e menor do que 400, indica sucesso. Qualquer outro código maior ou igual a 400 ou menor do que 200 indica falha.
+Então, dentro deste cenário, nós estamos fazendo o teste dentro do Pod que está executando o container e sua aplicação na porta 80. 
 
-[03:41] Logo, vamos ter essa garantia que teremos uma requisição com status ok, um redirecionamento e assim por diante. Então, ele vai ter essa garantia de que a aplicação está funcionando.
+E qual é o caminho? 
 
-[03:53] Então, vamos lá! Vamos salvar e nesse cenário não vamos precisar reiniciar este Pod e basta aplicarmos ao nosso \portal-noticias-deployment.yaml e ele vai configurar.
+Por exemplo, temos o nosso localhost:30000, nós temos, também, o nosso sistema de noticias com o nosso localhost:30001/inserir_noticias.php, então, nesse caso, se quiséssemos testar essa rota, nós definiríamos este caminho.
 
-[04:09] E agora, se dermos um kubectl describe pod portal-noticias-deployment o que temos aqui são todas as nossas informações que ele foi iniciado, depois de ter sido criado e tudo muito bem definido. Nós temos tudo certo, nenhum problema, ele está em execução.
+Mas, como estamos testando o nosso portal de notícias, simplesmente, vamos colocar o nosso localhost:30000 e como não temos um caminho auxiliar a esse, nós temos só o nosso principal, que é o localhost:30000, sem nada depois da barra, o nosso caminho nada mais é, simplesmente, do que barra.
 
-[04:31] Não é à toa que se dermos um kubectl get pods estão aqui os três Pods em execução. Nós conseguimos acessar nossa aplicação normalmente, com status de 200, então, nossa aplicação está saudável e nós temos a garantia de que, se em algum momento, ao fazer essa requisição tivermos um Status Code de 500, por exemplo, conseguiremos fazer com que nossa aplicação, dentro do nosso container, seja reiniciada sem nenhuma preocupação e vamos informar que queremos que isso aconteça porque não aconteceu o que esperávamos.
+E, agora, nós precisamos definir, também, o seguinte: de quanto em quanto tempo eu quero fazer este teste? 
 
-[05:10] Então, paramos com essa parte Liveness Probe. Nós sabemos, agora, garantir, definir uma prova de vida para nossas aplicações, que vimos que é bem simples. Basta adicionarmos o trecho do livenessProbe do arquivo portal-noticias-deployment.yaml nós podemos, inclusive, fazer a mesma definição para nosso sistema-noticias-statefulset.yaml, porque nada vai mudar.
+Então, a cada quantos segundos eu quero executar esse teste? 
 
-[05:30] Eu vou, inclusive, salvar o mesmo trecho e só vou aplicar com kubectl apply -f no nosso sistema-noticias-statefulset.yaml e ele também foi configurado e tudo continuou funcionando, normalmente, sem nenhum mistério.
+A cada 10 segundos eu quero fazer a validação deste container.
 
-[05:46] Se eu dou um "F5" na página do Portal de Notícias no navegador, ele está configurando, ele está subindo, novamente. Pronto, e agora tudo continua funcionando. Repare que ele só demorou um pouco para subir, porque ele estava reconfigurando e subindo tudo, os nossos Persistent Volums, mas, nenhum problema.
+E qual é o número máximo de falhas que eu tolero para este teste antes dele executar o reinício do container. 
 
-[06:09] Então, para esse vídeo, finalizamos agora e no próximo vamos falar sobre outro tipo de provas de vida, que são os Readiness Probe e eu vejo vocês lá. Até mais!
+Então, qual é o meu Threshold o que eu tenho de limite para isso? 
+
+Eu vou definir como três falhas sendo o número máximo, antes dele executar o reinício desse meu container.
+
+E, por fim, o que eu preciso definir também? 
+
+Eu preciso informar a partir de qual momento ele vai começar a executar esses testes, porque o container subiu, mas, não necessariamente ele já está pronto para receber esses testes. 
+
+Então, eu vou definir um atraso inicial de, por exemplo, 20 segundos antes dele começar a executar o primeiro teste.
+
+Então, o container vai subir depois de 20 segundos ele vai começar a executar este teste a cada 10 segundos. 
+
+Mas, a pergunta que temos nesse momento é como que podemos definir qual é o nosso critério? 
+
+Porque estamos fazendo um get na porta 80, mas, o que ele vai considerar como saudável ou não?
+
+Se viermos na documentação, mais uma vez, do nosso Liveness Probe, nós vamos ver que ele tem um intervalo específico para considerar a aplicação saudável. 
+
+#### qual status code o kubernetes considera como a aplicaçao esta saudavel?
+Então, 
+
+```diff
++ qualquer código html que seja igual ou maior a 200 e menor do que 400, indica sucesso. 
+
++ Qualquer outro código maior ou igual a 400 ou menor do que 200 indica falha.
+```
+
+Logo, vamos ter essa garantia que teremos uma requisição com status ok, um redirecionamento e assim por diante. 
+
+Então, ele vai ter essa garantia de que a aplicação está funcionando.
+
+Então, vamos lá! 
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: portal-noticias-deployment
+spec:
+  template:
+    metadata:
+      name: portal-noticias
+      labels:
+        app: portal-noticias
+      spec:
+        containers:
+          - name: portal-noticias-container
+            image: aluracursos/portal-noticias:1
+            ports:
+              - containerPort: 80
+            envFrom:
+              configMapRef:
+                name: portal-configmap
+            livenessProbe:
+              httpGet:
+                path: /
+                port: 80
+              periodoSeconds: 10
+              failureThreshold: 3
+              initialDelaySeconds: 20
+  replicas: 3
+  selector:
+    matchLabels:
+        app: portal-noticias
+```
+
+Vamos salvar e nesse cenário não vamos precisar reiniciar este Pod e basta aplicarmos ao nosso \portal-noticias-deployment.yaml e ele vai configurar.
+
+E agora, se dermos um kubectl describe pod portal-noticias-deployment o que temos aqui são todas as nossas informações que ele foi iniciado, depois de ter sido criado e tudo muito bem definido. Nós temos tudo certo, nenhum problema, ele está em execução.
+
+Não é à toa que se dermos um kubectl get pods estão aqui os três Pods em execução. Nós conseguimos acessar nossa aplicação normalmente, com status de 200, então, nossa aplicação está saudável e nós temos a garantia de que, se em algum momento, ao fazer essa requisição tivermos um Status Code de 500, por exemplo, conseguiremos fazer com que nossa aplicação, dentro do nosso container, seja reiniciada sem nenhuma preocupação e vamos informar que queremos que isso aconteça porque não aconteceu o que esperávamos.
+
+Então, paramos com essa parte Liveness Probe. 
+
+Nós sabemos, agora, garantir, definir uma prova de vida para nossas aplicações, que vimos que é bem simples. 
+
+Basta adicionarmos o trecho do livenessProbe do arquivo portal-noticias-deployment.yaml nós podemos, inclusive, fazer a mesma definição para nosso sistema-noticias-statefulset.yaml, porque nada vai mudar.
+
+```
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: sistema-noticias-statefulset
+spec:
+  replicas: 1
+  template: 
+    metadata: 
+      labels:
+        app: sistema-noticias
+      name: sistema-noticias
+    spec: 
+      containers:
+        - name: sistema-noticias-container
+          image: aluracursos/sistema-noticias:1
+          ports:
+            - containerPort: 80
+          envFrom:
+            - configMapRef:
+              name: sistema-configmap
+          volumeMounts:
+            - name: imagens
+              mountPath: /var/www/html/uploads
+            - name: sessao
+              mountPath: /tmp
+          livenessProbe:
+              httpGet:
+                path: /
+                port: 80
+              periodoSeconds: 10
+              failureThreshold: 3
+              initialDelaySeconds: 20
+      volumes:
+        - name: imagens
+          persistentVolumeClaim:
+            claimName: imagens-pvc
+        - name: sessao
+          persistentVolumeClaim:
+            claimName: sessao-pvc
+  selector:
+    matchLabels:
+      app: sistema-noticias
+  serviceName: svc-sistema-noticias
+```
+
+Eu vou, inclusive, salvar o mesmo trecho e só vou aplicar com kubectl apply -f no nosso sistema-noticias-statefulset.yaml e ele também foi configurado e tudo continuou funcionando, normalmente, sem nenhum mistério.
+
+Se eu dou um "F5" na página do Portal de Notícias no navegador, ele está configurando, ele está subindo, novamente. 
+
+Pronto, e agora tudo continua funcionando. 
+
+Repare que ele só demorou um pouco para subir, porque ele estava reconfigurando e subindo tudo, os nossos Persistent Volums, mas, nenhum problema.
 
 ### Utilizando Readiness Probes
-[00:00] Estamos de volta ao nosso cenário original porque veremos outro problema que tem a possibilidade de acontecer. Temos algumas requisições chegando ao nosso serviço e ele vai fazer o balanceamento entre cada um desses Pods.
+Estamos de volta ao nosso cenário original porque veremos outro problema que tem a possibilidade de acontecer. 
 
-[00:14] Mas, o que temos a possibilidade de ver acontecer? Em algum momento, algum desses Pods, por exemplo, tem a capacidade total de falhar. Eles são suscetíveis a erro, ou um container dentre deste Pod também. E o que vai acontecer?
+Temos algumas requisições chegando ao nosso serviço e ele vai fazer o balanceamento entre cada um desses Pods.
 
-[00:32] Nós já vimos a possibilidade de definir um Liveness Probe para o container desse Pod e ele vai voltar à execução, ou também, se o Pod, como um todo, tiver falhado, temos a possibilidade de usar Deployments, StatefulSets, ReplicaSets para garantir que este Pod vai voltar à execução.
+Mas, o que temos a possibilidade de ver acontecer? 
 
-[00:52] Mas, o que importa é que enquanto ele volta à execução, o Pod já está pronto, mas, o container que, também, já subiu, ainda não terminou, não está pronto para receber essas requisições. Ele ainda não terminou de executar os scripts que ele tem para iniciar ou qualquer outra coisa do tipo.
+Em algum momento, algum desses Pods, por exemplo, tem a capacidade total de falhar. 
 
-[01:12] Então, precisamos ter uma maneira de garantir quando o container deste Pod estará pronto para receber as requisições e consigamos parar de fazer essa divisão entre só o nosso segundo e terceiro Pod, para que o primeiro receba um sinal de ok e passe a receber as requisições, novamente.
+Eles são suscetíveis a erro, ou um container dentre deste Pod também. 
 
-[01:31] E a questão para fazermos isso é bem simples. Basta definirmos os nossos Readiness Probes, que são bem fáceis e é, basicamente, definirmos uma situação bem parecida, só vão mudar as consequências.
+E o que vai acontecer?
 
-[01:46] Então, vou colocar um Readiness Probe com a mesma declaração de um Liveness Probe, onde eu vou fazer uma requisição utilizando o verbo get para o meu caminho barra na porta 80 a cada 10 segundos e o failureThreshold, onde vimos que no nosso Liveness Probe significa que se ele não conseguir executar este teste três vezes, ele vai reiniciar a aplicação.
+Nós já vimos a possibilidade de definir um Liveness Probe para o container desse Pod e ele vai voltar à execução, ou também, se o Pod, como um todo, tiver falhado, temos a possibilidade de usar Deployments, StatefulSets, ReplicaSets para garantir que este Pod vai voltar à execução.
 
-[02:14] Nesse caso significa que se ele não conseguir executar esse teste três vezes, na quarta vez, ele vai enviar as requisições, mesmo assim, então ele vai passar a ignorar esse Readiness Probe.
+Mas, o que importa é que enquanto ele volta à execução, o Pod já está pronto, mas, o container que, também, já subiu, ainda não terminou, não está pronto para receber essas requisições. Ele ainda não terminou de executar os scripts que ele tem para iniciar ou qualquer outra coisa do tipo.
 
-[02:31] Então, podemos definir que um número maior, como, por exemplo, cinco, dez, e um tempo inicial, podemos colocar, por exemplo, três segundos depois que o Pod iniciar e o container estiver subido também, nós precisamos esperar três segundos antes de começar a fazer estes testes, que ele vai executar a cada 10 segundos.
+```diff
++ o container dentro do pod pode ainda nao estar 100% para receber requisiçoes
+```
 
-[02:54] Então, pegamos o trecho do readnessProbe e podemos também aplicar ao nosso statefulset, aos containers que estão no nosso statefulset, no caso, do nosso sistema. Então, o que precisamos fazer? A mesma coisa, Readiness Probe, mas, podemos, também, colocar outro critério, que ele vai definir essa aplicação como pronta se ele conseguir enviar requisições para o nosso inserir-noticias.php.
+Então, precisamos ter uma maneira de garantir quando o container deste Pod estará pronto para receber as requisições e consigamos parar de fazer essa divisão entre só o nosso segundo e terceiro Pod, para que o primeiro receba um sinal de ok e passe a receber as requisições, novamente.
 
-[03:25] Então, vamos definir a nossa aplicação como pronta para receber requisições, quando o inserir-noticias.php retornar um código entre 200, inclusive 400, exclusive. Basta voltarmos no nosso PowerShell, dar um kubectl apply -fno nosso portal-noticias-deployment.yaml, ele vai configurar, e também, no nosso sistema-noticias-statefulset.yaml, que vai ser configurado, também.
+E a questão para fazermos isso é bem simples. 
 
-[03:54] Agora, podemos dar um kubectl get pod --watch que ele vai começar a fazer a mágica acontecer. Ele vai encerrar os containers e Pods anteriores e vai começar a executar novos, mas, ainda não estão prontos, porque ele está esperando aquele tempo de delay inicial para que seja feito.
+#### Readines Probes
+Basta definirmos os nossos Readiness Probes, que são bem fáceis e é, basicamente, definirmos uma situação bem parecida, só vão mudar as consequências.
 
-[04:12] No nosso caso do nosso sistema-notícias do statefulset, ele está como 01, ele esperou três segundos para começar a executar o teste e, daqui a pouco, ele vai ficar com status de running 1/1, significando que ele já está pronto para receber requisições.
+Então, no portal-noticias-deployment.yaml, vou colocar um Readiness Probe com a mesma declaração de um Liveness Probe, onde eu vou fazer uma requisição utilizando o verbo get para o meu caminho barra na porta 80 a cada 10 segundos e o failureThreshold, onde vimos que no nosso Liveness Probe significa que se ele não conseguir executar este teste três vezes, ele vai reiniciar a aplicação.
 
-[04:31] Se viermos no navegador e tentar fazer uma requisição, conseguimos, porque se viermos no PowerShell, ele já terminou. Ele só não tinha terminado de atualizar, mas, já está em execução há oito segundos.
+Nesse caso significa que 
+```diff
++ se ele não conseguir executar esse teste três vezes, na quarta vez, ele vai enviar as requisições, mesmo assim, então ele vai passar a ignorar esse Readiness Probe.
+```
 
-[04:45] Então, tudo continua funcionando. Temos o nosso portal, temos o nosso sistema, vamos colocar uma notícia, de novo, com outro assunto novo, mas, vamos repetir a mesma imagem da Alura, salvando, clicando no botão “Salvar” dentro da janela. Tudo continua funcionando, vamos dar um "F5" e perfeito.
+Então, podemos definir que um número maior, como, por exemplo, cinco, dez, e um tempo inicial, podemos colocar, por exemplo, três segundos depois que o Pod iniciar e o container estiver subido também, nós precisamos esperar três segundos antes de começar a fazer estes testes, que ele vai executar a cada 10 segundos.
 
-[05:06] Então, agora temos a garantia que nossa aplicação está saudável, pronta para receber requisições e também para ser reiniciada com a nossa criterização.
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: portal-noticias-deployment
+spec:
+  template:
+    metadata:
+      name: portal-noticias
+      labels:
+        app: portal-noticias
+      spec:
+        containers:
+          - name: portal-noticias-container
+            image: aluracursos/portal-noticias:1
+            ports:
+              - containerPort: 80
+            envFrom:
+              configMapRef:
+                name: portal-configmap
+            livenessProbe:
+              httpGet:
+                path: /
+                port: 80
+              periodoSeconds: 10
+              failureThreshold: 3
+              initialDelaySeconds: 20
+            readinessProbe:
+              httpGet:
+                path: /
+                port: 80
+              periodoSeconds: 10
+              failureThreshold: 5
+              initialDelaySeconds: 3
+  replicas: 3
+  selector:
+    matchLabels:
+        app: portal-noticias
+```
 
-[05:18] E podemos ir mais além, posso mostrar para vocês que além de toda essa questão, de definir através de request HTTP, nós podemos, também, fazer definições através de TCP, então, podemos enviar através de um Socket com o TCP, por alguma porta, para validar se a aplicação está saudável ou não.
+Então, pegamos o trecho do readnessProbe e podemos também aplicar ao nosso statefulset, aos containers que estão no nosso statefulset, no caso, do nosso sistema. 
 
-[05:41] Então, essa aula foi sobre isso. Para vermos como podemos garantir que nossas aplicações estão prontas para serem executadas, receberem requisições e também, se elas estão saudáveis ou devem ser reiniciadas, através dos nossos Liveness Probes. Então, por esse vídeo é só. Nós nos vemos na próxima aula e até mais!
+Então, o que precisamos fazer? 
+
+A mesma coisa, Readiness Probe, mas, podemos, também, colocar outro critério, que ele vai definir essa aplicação como pronta se ele conseguir enviar requisições para o nosso inserir-noticias.php.
+
+Então, vamos definir a nossa aplicação como pronta para receber requisições, quando o inserir-noticias.php retornar um código entre 200 inclusive e 400 exclusive. 
+
+```
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: sistema-noticias-statefulset
+spec:
+  replicas: 1
+  template: 
+    metadata: 
+      labels:
+        app: sistema-noticias
+      name: sistema-noticias
+    spec: 
+      containers:
+        - name: sistema-noticias-container
+          image: aluracursos/sistema-noticias:1
+          ports:
+            - containerPort: 80
+          envFrom:
+            - configMapRef:
+              name: sistema-configmap
+          volumeMounts:
+            - name: imagens
+              mountPath: /var/www/html/uploads
+            - name: sessao
+              mountPath: /tmp
+          livenessProbe:
+              httpGet:
+                path: /
+                port: 80
+              periodoSeconds: 10
+              failureThreshold: 3
+              initialDelaySeconds: 20
+          readinessProbe:
+              httpGet:
+                path: /inserir_noticias.php
+                port: 80
+              periodoSeconds: 10
+              failureThreshold: 5
+              initialDelaySeconds: 3
+      volumes:
+        - name: imagens
+          persistentVolumeClaim:
+            claimName: imagens-pvc
+        - name: sessao
+          persistentVolumeClaim:
+            claimName: sessao-pvc
+  selector:
+    matchLabels:
+      app: sistema-noticias
+  serviceName: svc-sistema-noticias
+```
+
+Basta voltarmos no nosso PowerShell, dar um kubectl apply -f no nosso portal-noticias-deployment.yaml, ele vai configurar, e também, no nosso sistema-noticias-statefulset.yaml, que vai ser configurado, também.
+
+Agora, podemos dar um kubectl get pod --watch. 
+
+Ele vai encerrar os containers e Pods anteriores e vai começar a executar novos, mas, ainda não estão prontos, porque ele está esperando aquele tempo de delay inicial para que seja feito.
+
+No nosso caso do nosso sistema-notícias do statefulset, ele está como 0/1, ele esperou três segundos para começar a executar o teste e, daqui a pouco, ele vai ficar com status de running 1/1, significando que ele já está pronto para receber requisições.
+
+Se viermos no navegador e tentar fazer uma requisição, conseguimos, porque se viermos no PowerShell, ele já terminou. Ele só não tinha terminado de atualizar, mas, já está em execução há oito segundos.
+
+Então, tudo continua funcionando. Temos o nosso portal, temos o nosso sistema, vamos colocar uma notícia, de novo, com outro assunto novo, mas, vamos repetir a mesma imagem da Alura, salvando, clicando no botão “Salvar” dentro da janela. Tudo continua funcionando, vamos dar um "F5" e perfeito.
+
+Então, agora temos a garantia que nossa aplicação está saudável, pronta para receber requisições e também para ser reiniciada com a nossa criterização.
+
+E podemos ir mais além, posso mostrar para vocês que além de toda essa questão, de definir através de request HTTP, nós podemos, também, fazer definições através de TCP, então, podemos enviar através de um Socket com o TCP, por alguma porta, para validar se a aplicação está saudável ou não.
+
+Então, essa aula foi para vermos como podemos garantir que nossas aplicações estão prontas para serem executadas, receberem requisições e também, se elas estão saudáveis ou devem ser reiniciadas, através dos nossos Liveness Probes. 
 
 ### Para Saber Mais: Startup Probes
 Há um terceiro tipo de probe voltado para aplicações legadas, o Startup Probe. Algumas aplicações legadas exigem tempo adicional para inicializar na primeira vez. Nem sempre Liveness ou Readiness Probes vão conseguir resolver de maneira simples os problemas de inicialização de aplicações legadas. Mais informações sobre Startup Probes podem ser adquiridas por aqui.
@@ -5019,79 +5427,244 @@ https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-read
 * alem do HTTP, tambem podemos fazer verificaçoes via TCP
 
 ### Escalando pods automaticamente - Horizontal Pod Autoscaler
-[00:00] Agora nós vamos ver um cenário um pouco diferente do que nós estamos habituados.
+Agora nós vamos ver um cenário um pouco diferente do que nós estamos habituados.
 
-[00:04] Nós temos um Pod sendo gerenciado por um service e as requisições vão chegando para esse service e ele vai enviando para o nosso Pod, até aí nada de novo.
+Nós temos um Pod sendo gerenciado por um service e as requisições vão chegando para esse service e ele vai enviando para o nosso Pod, até aí nada de novo.
 
-[00:13] Mas, o que nós temos a capacidade de imaginar aqui? Vamos colocar um cenário novo, vamos dizer que nós estamos falando do nosso portal de notícias e agora nós estamos recebendo diversas requisições porque nós colocamos uma notícia nova no nosso portal e várias pessoas agora querem ler.
+Mas, vamos colocar um cenário novo, vamos dizer que nós estamos falando do nosso portal de notícias e agora nós estamos recebendo diversas requisições porque nós colocamos uma notícia nova no nosso portal e várias pessoas agora querem ler.
 
-[00:29] Então, mais pessoas vão passar a acessar o nosso portal. Isso quer dizer o que? Que o nosso Pod vai passar a consumir mais recursos porque ele vai precisar lidar com mais requisições e enviar mais respostas. Isso quer dizer que ele vai ter um consumo maior de processamento, memória e afins.
+Então, mais pessoas vão passar a acessar o nosso portal. 
 
-[00:46] Qual é o problema disso? O problema é que se ele ficar consumindo de vários, por vários momentos, muitos momentos esse recurso, esse processamento, essa memória, ele vai passar a demorar responder os nossos usuários.
+Isso quer dizer o que? 
 
-[01:00] Porque ele vai estar ali meio que lento por faltar recursos para ele conseguir trabalhar de maneira hábil.
+Que o nosso Pod vai passar a consumir mais recursos porque ele vai precisar lidar com mais requisições e enviar mais respostas. 
 
-[01:07] E pior ainda, nós temos a possibilidade desse Pod parar de funcionar por falta de recurso e por mais que ele esteja dentro de um Deployment ou de um StatefulSet ou de um ReplicaSet e seja reiniciado, ele vai continuar caindo pela falta de recurso. Então, a nossa aplicação fica comprometida.
+Isso quer dizer que ele vai ter um consumo maior de processamento, memória e afins.
 
-[01:28] Como que nós podemos resolver isso? Basta nós adicionarmos mais Pods. Com mais Pods agora nós temos mais poderes de processamento para cada um deles e vamos conseguir trabalhar sem nenhum problema.
+Qual é o problema disso? 
 
-[01:40] Então, nós conseguimos responder os nossos usuários de maneira hábil e, caso o número de acessos ao nosso portal caia, basta diminuir o número de Pods em execução. Perfeito!
+O problema é que se ele ficar consumindo por vários momentos esses recursos, esse processamento, essa memória, ele vai passar a demorar responder os nossos usuários.
 
-[01:53] Só que o problema é: será que temos alguma maneira automatizada de fazer isso? Nós temos e quem vai nos ajudar, esse recurso se chama Horizontal Pod Autescaler. Vamos dar uma olhada na documentação para ver o que esse recurso vai fazer por nós.
+Porque ele vai estar ali meio que lento por faltar recursos para ele conseguir trabalhar de maneira hábil.
 
-[02:13] Se dermos uma lida na documentação do Kubernetes, ele resume para nós que o Horizontal Pod Autoescaler é um recurso capaz de, automaticamente, escalar o número de Pods em um Deployment, em um ReplicaSet, em um StatefulSet, baseado na observação da CPU, então, nós temos um primeiro ponto que vamos precisar nos preocupar.
+E pior ainda, nós temos a possibilidade desse Pod parar de funcionar por falta de recurso e por mais que ele esteja dentro de um Deployment ou de um StatefulSet ou de um ReplicaSet e seja reiniciado, ele vai continuar caindo pela falta de recurso. 
 
-[02:31] E ele vai fazer isso de maneira automática, que é o que importa para nós. Então, vamos fazer um Horizontal Pod Autoescaler para o nosso Deployment do nosso portal-noticias, baseado num consumo de CPU dele, nós vamos aumentar ou diminuir, para suprir essa demanda, o número de Pods.
+Então, a nossa aplicação fica comprometida.
 
-[02:50] Só que, antes de começarmos, repara se voltarmos na documentação e lermos mais uma vez, ele faz isso baseado em métricas, como, por exemplo, a utilização de CPU.
+Como que nós podemos resolver isso? 
 
-[03:02] Só que nós precisamos informar, nós temos essa necessidade de declarar quanto esse container, dentro desse Pod, consome de CPU. Quanto ele pede de CPU para funcionar?
+Basta nós adicionarmos mais Pods. 
 
-[03:16] Então, nós podemos definir que dentre as informações que ele requer, por exemplo, ele pede por algum recurso, que é a nossa CPU. Então, podemos colocar que este container exige 10 milicores de CPU para funcionar.
+```diff
++ Com mais Pods agora nós temos mais poderes de processamento para cada um deles e vamos conseguir trabalhar sem nenhum problema.
 
-[03:35] E, como ele pede por esse recurso de CPU, nada mais válido do que colocarmos ele dentro de um campo chamado recursos. E alinhamos tudo para ficar certo.
++ Então, nós conseguimos responder os nossos usuários de maneira hábil e, caso o número de acessos ao nosso portal caia, basta diminuir o número de Pods em execução. Perfeito!
+```
 
-[03:48] Então, nós estamos falando que cada Pod que tenha um container dentro do resources vai pedir 10 milicores de CPU para funcionar.
+Só que o problema é: será que temos alguma maneira automatizada de fazer isso? 
 
-[04:00] Então, agora que definimos isso, como fazemos o Horizontal Pod Autoescaler para este Pod? Simples! Assim como os nossos outros recursos da API, se voltarmos à documentação, nós vemos que o Horizontal Pod Autoescaler também é um objeto da API.
+#### Horizontal Pod Autoscaler
+Nós temos e quem vai nos ajudar, esse recurso se chama Horizontal Pod Autescaler. 
 
-[04:17] Então, nós podemos criar para ele um arquivo de definição no terminal, que vou chamar de portal-noticias-hpa.yaml. Dentro dele podemos definir a versão da API, que se olharmos com clareza, vemos que tem ou um autoescaling/v1 ou um autoescaling/v2beta2.
+Vamos dar uma olhada na documentação para ver o que esse recurso vai fazer por nós.
 
-[04:37] Nós vamos utilizar a v2beta2 porque toda a documentação está começando a ser mais baseada nela. Ela já está em vias, em ficar 100% estável e ela tem novas instruções e mais enxutas também, então, e por isso vamos utilizar ela.
+Se dermos uma lida na documentação do Kubernetes, ele resume para nós que 
 
-[04:55] Então, vamos definir nossa versão da API, o tipo do que nós queremos criar é um HorizontalPodAutoescaler e ele tem um metadata, assim como nos outros recursos e vamos dar o nome para ele de portal-noticias-hpa.
+```diff
++ o Horizontal Pod Autoescaler é um recurso capaz de, automaticamente, escalar o número de Pods em um Deployment, em um ReplicaSet, em um StatefulSet, baseado na observação da CPU, então, nós temos um primeiro ponto que vamos precisar nos preocupar.
+```
 
-[05:10] Nas especificações dele, nós precisamos nos preocupar com o seguinte: nós queremos que este Horizontal Pod Autoescaler faça o que? A referência ao nosso portal de notícias. Então, eu preciso definir à quem eu quero fazer a referência.
+E ele vai fazer isso de maneira automática, que é o que importa para nós. 
 
-[05:31] Então, qual é o meu alvo que eu quero fazer referência? Mais além, quem eu quero escalar automaticamente? Eu preciso informar qual é a versão da API do meu alvo. Então, qual é a versão do API do meu alvo, que é esse Deployment? É apps/v1.
+Então, vamos fazer um Horizontal Pod Autoescaler para o nosso Deployment do nosso portal-noticias, baseado num consumo de CPU dele, nós vamos aumentar ou diminuir, para suprir essa demanda, o número de Pods.
 
-[05:49] Qual é o tipo do que eu quero escalar automaticamente? É um Deployment. Qual é o nome desse Deployment? É portal-noticia-deployment.
+```diff
+- Só que, antes de começarmos, repara se voltarmos na documentação e lermos mais uma vez, ele faz isso baseado em métricas, como, por exemplo, a utilização de CPU.
+```
 
-[06:01] E agora, eu preciso informar o seguinte: qual o número mínimo e máximo de réplicas que eu quero ter para esses Pods do meu Deployment? Eu quero manter sempre um número mínimo de uma réplica e nunca vou poder passar, por exemplo, de 10.
+Só que nós precisamos informar, nós temos essa necessidade de declarar quanto esse container, dentro desse Pod, consome de CPU. 
 
-[06:17] Então, por mais que chegue 1 trilhão de requisições e eu precise colocar 200 Pods, eu não vou passar, nunca, de 10.
+Quanto ele pede de CPU para funcionar?
 
-[06:28] E eu preciso, agora, informar quais são as métricas que eu quero definir para esse Horizontal Pod Autoescaler. Então, o que eu quero definir como o tipo de métrica?
+Então, nós podemos definir no portal-noticias-deployment.yaml, que dentre as informações que ele requer, por exemplo, ele pede por algum recurso, que é a nossa CPU. 
 
-[06:37] Eu quero, baseado nos recursos, não nos recursos do Kubernetes em si, e sim nos recursos do sistema, porque temos recursos de processamento, memória e afins; eu quero definir qual eu vou utilizar.
+Então, podemos colocar que este container exige 10 milicores de CPU para funcionar.
 
-[06:50] Então, qual é esse recurso que eu quero usar como critério? Eu quero utilizar um recurso chamado CPU. E o que eu almejo com esse recurso? Eu quero que baseado na utilização dele, ele mantenha sempre um uso médio de 50%, por exemplo.
+E, como ele pede por esse recurso de CPU, nada mais válido do que colocarmos ele dentro de um campo chamado recursos. 
 
-[07:10] 50% de que? Por isso que nós definimos esses 10 milicores. Então, se o consumo médio da nossa aplicação desse Deployment chegar a mais de 5 milicores, o nosso Horizontal Pod Autoescaler vai fazer a mágica dele acontecer, ele vai criar mais Pods para que o consumo médio não passe de 50% de 10 milicores, então, para que ele não passe de 5 milicores, ele fique nessa faixa.
+E alinhamos tudo para ficar certo.
 
-[07:47] Então, vamos fazer isso agora. Salvamos o nosso portal-noticias-deployment com a mudança dele e o nosso Horizontal Pod Autoescaler. Vamos, então, aplicar essas mudanças no PowerShell kubectl apply –f vou passar o nosso portal-noticias-deployment.yaml e agora vou passar o nosso kubectl apply –f e vou passar o nosso portal-noticias-hpa.yaml.
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: portal-noticias-deployment
+spec:
+  template:
+    metadata:
+      name: portal-noticias
+      labels:
+        app: portal-noticias
+      spec:
+        containers:
+          - name: portal-noticias-container
+            image: aluracursos/portal-noticias:1
+            ports:
+              - containerPort: 80
+            envFrom:
+              configMapRef:
+                name: portal-configmap
+            livenessProbe:
+              httpGet:
+                path: /
+                port: 80
+              periodoSeconds: 10
+              failureThreshold: 3
+              initialDelaySeconds: 20
+            readinessProbe:
+              httpGet:
+                path: /
+                port: 80
+              periodoSeconds: 10
+              failureThreshold: 5
+              initialDelaySeconds: 3
+            resources:
+              requests: 
+                cpu: 10m
+  replicas: 3
+  selector:
+    matchLabels:
+        app: portal-noticias
+```
 
-[08:18] Agora, nós criamos. E ele foi criado. Se nós dermos, agora, um kubeclt get hpa, de Horizontal Pod Autoescaler, o que vai acontecer? Que legal!
+Então, nós estamos falando que cada Pod que tenha um container dentro do resources vai pedir 10 milicores de CPU para funcionar.
 
-[08:27] Ele está falando que nós temos o nosso Horizontal Pod Autoescaler, que faz referência a este nosso Deployment do portal-notícias, mas, se temos um olhar de que, por enquanto, ele ainda não reconheceu as nossas réplicas, isso é um primeiro problema, mas, ele também não sabe quanto estamos utilizando daqueles 50% que nós definimos.
+Então, agora que definimos isso, como fazemos o Horizontal Pod Autoescaler para este Pod? 
 
-[08:50] Vamos dar um comando, de novo, para ver se alguma coisa muda. Temos um positivo, ele já identificou as três réplicas, que por padrão, nós definimos no nosso arquivo. As três réplicas estão em execução, perfeito, mas, ele ainda não consegue identificar quantos por cento do processamento está sendo usado.
+Simples! 
 
-[09:11] Vamos tentar mais uma vez e nada. Vamos fazer o seguinte, vamos dar uma olhada, vamos ser abelhudos e vamos descrever o nosso Horizontal Pod Autoescaler chamado portal-noticias-hpa.
+Assim como os nossos outros recursos da API, se voltarmos à documentação, nós vemos que o Horizontal Pod Autoescaler também é um objeto da API.
 
-[09:25] Olha o que aconteceu. Vamos dar uma olhada no que está descrito após o comando. Ele foi incapaz de pegar as métricas para recurso de CPU. Ele não foi capaz de pegar esses dados da API de métricas. O servidor não pôde encontrar esse recurso pedido. E aqui ele fala que essa métrica foi inválida e nós precisamos definir o que é uma CPU.
+#### criando um Horizontal Pod Autoscaler
+Então, nós podemos criar para ele um arquivo de definição no terminal, que vou chamar de portal-noticias-hpa.yaml. 
 
-[09:50] Então, temos um pequeno problema. O que é esse servidor de métricas que ele falou para nós. Como conseguimos utilizá-lo para fazer o nosso Horizontal Pod Autoescaler funcionar? Isso vamos ver no próximo vídeo e eu vejo vocês lá. Até mais!
+Dentro dele podemos definir a versão da API, que se olharmos com clareza, vemos que tem ou um autoescaling/v1 ou um autoescaling/v2beta2.
+
+Nós vamos utilizar a v2beta2 porque toda a documentação está começando a ser mais baseada nela. 
+
+Ela já está em vias, em ficar 100% estável e ela tem novas instruções e mais enxutas também, então, e por isso vamos utilizar ela.
+
+Então, vamos definir nossa versão da API, o tipo do que nós queremos criar é um HorizontalPodAutoescaler e ele tem um metadata, assim como nos outros recursos e vamos dar o nome para ele de portal-noticias-hpa.
+
+Nas especificações dele, nós precisamos nos preocupar com o seguinte: nós queremos que este Horizontal Pod Autoescaler faça o que? A referência ao nosso portal de notícias. 
+
+Então, eu preciso definir à quem eu quero fazer a referência.
+
+Então, qual é o meu alvo que eu quero fazer referência? 
+
+Mais além, quem eu quero escalar automaticamente? 
+
+Eu preciso informar qual é a versão da API do meu alvo. 
+
+Então, qual é a versão do API do meu alvo, que é esse Deployment? É apps/v1.
+
+Qual é o tipo do que eu quero escalar automaticamente? É um Deployment. Qual é o nome desse Deployment? É portal-noticia-deployment.
+
+E agora, eu preciso informar o seguinte: qual o número mínimo e máximo de réplicas que eu quero ter para esses Pods do meu Deployment? 
+
+Eu quero manter sempre um número mínimo de uma réplica e nunca vou poder passar, por exemplo, de 10.
+
+Então, por mais que chegue 1 trilhão de requisições e eu precise colocar 200 Pods, eu não vou passar, nunca, de 10.
+
+E eu preciso, agora, informar quais são as métricas que eu quero definir para esse Horizontal Pod Autoescaler. 
+
+Então, o que eu quero definir como o tipo de métrica?
+
+Eu quero, baseado nos recursos, não nos recursos do Kubernetes em si, e sim nos recursos do sistema, porque temos recursos de processamento, memória e afins; eu quero definir qual eu vou utilizar.
+
+Então, qual é esse recurso que eu quero usar como critério? Eu quero utilizar um recurso chamado CPU. 
+
+E o que eu almejo com esse recurso? 
+
+Eu quero que baseado na utilização dele, ele mantenha sempre um uso médio de 50%, por exemplo.
+
+50% de que? 
+
+Por isso que nós definimos esses 10 milicores. 
+
+```diff
++ Então, se o consumo médio da nossa aplicação desse Deployment chegar a mais de 5 milicores, o nosso Horizontal Pod Autoescaler vai criar mais Pods para que o consumo médio não passe de 50% de 10 milicores, então, para que ele não passe de 5 milicores, ele fique nessa faixa.
+```
+
+Então, vamos fazer isso agora. 
+
+```
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: portal-noticias-hpa
+spec: 
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: portal-noticias-deployment
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource: 
+        name: cpu
+        target: 
+          type: Utilization
+          averageUtilization: 50
+```
+
+Salvamos o nosso portal-noticias-deployment com a mudança dele e o nosso Horizontal Pod Autoescaler. 
+
+Vamos, então, aplicar essas mudanças no PowerShell kubectl apply –f vou passar o nosso portal-noticias-deployment.yaml e agora vou passar o nosso kubectl apply –f e vou passar o nosso portal-noticias-hpa.yaml.
+
+Agora, nós criamos. 
+
+Se nós dermos, agora, um 
+
+#### kubectl get hpa
+```
+kubeclt get hpa
+```
+
+, de Horizontal Pod Autoescaler, o que vai acontecer? 
+
+Ele está falando que nós temos o nosso Horizontal Pod Autoescaler, que faz referência a este nosso Deployment do portal-notícias, mas, se temos um olhar de que, por enquanto, ele ainda não reconheceu as nossas réplicas, isso é um primeiro problema, mas, ele também não sabe quanto estamos utilizando daqueles 50% que nós definimos.
+
+Vamos dar um comando, de novo, para ver se alguma coisa muda. 
+
+Temos um positivo, ele já identificou as três réplicas, que por padrão, nós definimos no nosso arquivo. 
+
+As três réplicas estão em execução, perfeito, mas, ele ainda não consegue identificar quantos por cento do processamento está sendo usado.
+
+Vamos tentar mais uma vez e nada. 
+
+Vamos fazer o seguinte, vamos dar uma olhada, vamos ser abelhudos e vamos descrever o nosso Horizontal Pod Autoescaler chamado portal-noticias-hpa.
+
+Olha o que aconteceu. 
+
+Vamos dar uma olhada no que está descrito após o comando. 
+
+```diff
+- Ele foi incapaz de pegar as métricas para recurso de CPU. 
+
+- Ele não foi capaz de pegar esses dados da API de métricas. 
+
+- O servidor não pôde encontrar esse recurso pedido. 
+```
+
+E aqui ele fala que essa métrica foi inválida e nós precisamos definir o que é uma CPU.
+
+Então, temos um pequeno problema. 
+
+O que é esse servidor de métricas que ele falou para nós. 
+
+Como conseguimos utilizá-lo para fazer o nosso Horizontal Pod Autoescaler funcionar?
 
 ### utilizando o HPA no windows
 Atenção! Para fazer o download do script de stress, basta acessar esse link. Já para o arquivo de definição do servidor de métricas, basta baixá-lo através desse link.
@@ -5100,15 +5673,21 @@ Atenção! Para fazer o download do script de stress, basta acessar esse link. J
 arquivo de stress: stress.zip
 arquivo de definiçao: componentes.yaml
 
-[00:00] Estou aqui no Github na página do metrics-server, que é um repositório do kubernetes-sigs e nós temos as informações necessárias para utilizarmos um servidor de métricas no nosso cluster.
+Estou aqui no Github na página do metrics-server, que é um repositório do kubernetes-sigs e nós temos as informações necessárias para utilizarmos um servidor de métricas no nosso cluster.
 
-[00:15] Se viermos na documentação, em Kubernetes Metrics Server, temos uma questão bem simples de caso de uso. Nós podemos usar um Servidor de Métricas para definir, basear as nossas informações de consumo de CPU e memória para utilizar o Horizontal Pod Autoescaler e, também, fazer esse ajuste de maneira automática, conforme recursos necessitados pelos containers.
+Se viermos na documentação, em Kubernetes Metrics Server, temos uma questão bem simples de caso de uso. 
 
-[00:37] Então, é basicamente o que queremos. E como utilizamos ele? É bem simples, é só descermos até a descrição de Deployments, clicar na parte Metrics Server releases e nós vamos baixar a versão v0.37, basta clicar mais embaixo em components.yaml e ele vai fazer o download para nós.
+Nós podemos usar um Servidor de Métricas para definir, basear as nossas informações de consumo de CPU e memória para utilizar o Horizontal Pod Autoescaler e, também, fazer esse ajuste de maneira automática, conforme recursos necessitados pelos containers.
 
-[00:56] Eu vou já arrastar ele direto para dentro do Visual Studio Code e você que está utilizando o Windows comigo, (teremos um vídeo somente para o Linux), vamos precisar fazer o seguinte.
+Então, é basicamente o que queremos. 
 
-[01:08] Se você reparar o trecho descritivo da apiVersion é nada mais do que um arquivo de definição, que nós já viemos trabalhando, mas, mais abaixo temos a parte toda da definição do nosso Metric Server, que está, exatamente, descrita no API.
+E como utilizamos ele? 
+
+É bem simples, é só descermos até a descrição de Deployments, clicar na parte Metrics Server releases e nós vamos baixar a versão v0.37, basta clicar mais embaixo em components.yaml e ele vai fazer o download para nós.
+
+Eu vou já arrastar ele direto para dentro do Visual Studio Code e você que está utilizando o Windows comigo, vamos precisar fazer o seguinte.
+
+Se você reparar o trecho descritivo da apiVersion é nada mais do que um arquivo de definição, que nós já viemos trabalhando, mas, mais abaixo temos a parte toda da definição do nosso Metric Server, que está, exatamente, descrita no API.
 
 //código omitido
 
@@ -5120,98 +5699,196 @@ metadata:
     namespace: kube-system
 ---
 
-//código omitidoCOPIAR CÓDIGO
-[01:22] Dentro dele, nós temos essa parte em que ele define os argumentos que serão passados para este Pod do nosso Metric Server.
+//código omitido
 
-[01:30] E, no caso do Windows, nós vamos precisar fazer o seguinte: mais aqui embaixo na documentação, ele fala na questão de configuração que, caso nós não tenhamos o objetivo de utilizar, fazer uma verificação de certificados, nós podemos desabilitar com essa flag --kubelet-insecure-tls.
+Dentro dele, nós temos essa parte em que ele define os argumentos que serão passados para este Pod do nosso Metric Server.
 
-[01:50] No caso do Windows, nós vamos precisar definir essa flag dentro do nosso arquivo de definição. Então, um traço aqui em args e definimos os --kubelet-insecure-tls. Basta, agora, darmos um kubectl apply -f no PowerShell e passar o nosso arquivo recém baixado e editado, que é o nosso \.componets.yaml.
+#### flag --kubelet-insecure-tls
+E, no caso do Windows, nós vamos precisar fazer o seguinte: mais aqui embaixo na documentação, ele fala na questão de configuração que, caso nós não tenhamos o objetivo de utilizar, fazer uma verificação de certificados, nós podemos desabilitar com essa flag --kubelet-insecure-tls.
 
-[02:13] Dando um "Enter" ele vai criar todos os recursos definidos lá dentro e agora, o que vai acontecer? Temos o nosso kubectl get hpa e ele continua um tanto quanto engraçado, isso não é um erro, ele continua falando que não está identificado.
+No caso do Windows, nós vamos precisar definir essa flag dentro do nosso arquivo de definição. 
 
-[02:32] Então, mais uma vez, vamos dar um kubectl describe hpa e passar o nosso portal-noticias-hpa. Ele, há 51 segundos tentou, de novo, pegar, mas, ainda não conseguiu, então, o que iremos fazer, o que precisamos fazer? Precisamos esperar ele terminar de carregar todas as informações, para que ele consiga ler todos os detalhes de consumo de CPU.
+Então, um traço aqui em args e definimos os --kubelet-insecure-tls. 
 
-[02:59] Isso é “um bug", que ele demora a fazer esse reconhecimento, então, assim que ele terminar, voltamos e seguimos com nosso Horizontal Pod Autoescaler.
+Basta, agora, darmos um kubectl apply -f no PowerShell e passar o nosso arquivo recém baixado e editado, que é o nosso \.componets.yaml.
 
-[03:10] Então, o que temos aqui? Temos que nós estamos utilizando 10% e não 50%, então, como estamos utilizando abaixo do nosso alvo, do nosso limite, temos, apenas, um Pod, uma réplica.
+Dando um "Enter" ele vai criar todos os recursos definidos lá dentro e agora, o que vai acontecer? 
 
-[03:25] Então, como será que ele vai se comportar se nós colocarmos mais recursos sendo consumidos, se nós enviarmos diversas requisições para nossa aplicação do nosso local host, que neste caso, definimos na porta 30000, o nosso portal.
+Temos o nosso kubectl get hpa e ele continua um tanto quanto engraçado, isso não é um erro, ele continua falando que não está identificado.
 
-[03:40] Então, eu vou no nosso Visual Studio Code fazer o seguinte: eu tenho um arquivo, que é um scriptshell, que vai enviar diversas requisições para o nosso local host na porta 30000, que é onde foi definido nosso portal de notícias, e vou fazer isso enviando indefinidamente. Só que para executarmos este script com SH, nós precisamos ter alguma ferramenta no Windows, que seja capaz de executá-la.
+Então, mais uma vez, vamos dar um kubectl describe hpa e passar o nosso portal-noticias-hpa. 
 
-[04:07] Nesse caso, eu vou utilizar o Git Bash. Então, vou deixar o link de download para vocês fazerem sem nenhum problema da ferramenta e para vocês poderem executar. Eu vou acessar o nosso diretório, que é o nosso kubernetes-alura e para executar ele é bem simples.
+Ele, há 51 segundos tentou, de novo, pegar, mas, ainda não conseguiu, então, o que iremos fazer, o que precisamos fazer? 
 
-[04:24] Eu vou colocar SH, vou colocar o nome do nosso script, que é stress.sh, e eu preciso definir, ele recebe um parâmetro aqui, o nosso intervalo. Eu vou colocar de 0,001 segundos e, por fim, vou colocar para vermos a saída dele, para imprimirmos tudo certo neste arquivo de saída.
+Precisamos esperar ele terminar de carregar todas as informações, para que ele consiga ler todos os detalhes de consumo de CPU.
 
-[04:45] Dou um "Enter" e ele vai começar a executar. E para sermos mais gananciosos, eu vou abrir o outro Git Bash e vou fazer a mesma coisa, executar dois ao mesmo tempo. Vou acessar o nosso kubernetes-alura e vou executar o SH também, no nosso stress.sh, a cada 0,0001 segundos e salvar em outro arquivo de saída.
+Isso é “um bug", que ele demora a fazer esse reconhecimento, então, assim que ele terminar, voltamos e seguimos com nosso Horizontal Pod Autoescaler.
 
-[05:09] Agora, nós vamos observar no nosso PowerShell o que? Eu vou colocar para analisarmos o nosso Horizontal Pod Autoescaler com o --watch e se nós repararmos ele já está com consumo de 30%, em relação ao alvo, e conforme esse consumo for subindo, nós vamos ver a mágica acontecer.
+Então, o que temos aqui? 
 
-[05:26] Então, em algum momento, esse consumo vai ficar tão visível para o nosso Pod, para o nosso container, que nós vamos precisar criar mais Pods. Então, como mais uma vez, não temos a garantia de quanto tempo ele vai demorar em nos exibir isso, eu vou fazer um pequeno corte no vídeo e quando estiver vendo os resultados, eu volto para comentarmos.
+Temos que nós estamos utilizando 10% e não 50%, então, como estamos utilizando abaixo do nosso alvo, do nosso limite, temos, apenas, um Pod, uma réplica.
 
-[05:48] O que está acontecendo é que tivemos esse consumo todo. Eu já vou parar para irmos dando tempo dele voltar ao normal; nós tivemos um consumo que ele foi subindo, ficou 30%, e 30% ainda está abaixo do nosso alvo, ele continuou com um Pod, com uma réplica.
+Então, como será que ele vai se comportar se nós colocarmos mais recursos sendo consumidos, se nós enviarmos diversas requisições para nossa aplicação do nosso localhost, que neste caso, definimos na porta 30000, o nosso portal.
 
-[06:11] Ficou em 100% ele viu que é melhor criar agora mais uma réplica e foi o que ele fez, então, ele se manteve e conforme a demanda foi subindo, ele viu que ainda estava longe do alvo, que era de 50%, e ele criou mais uma réplica.
+#### stress test
+Então, eu vou no nosso Visual Studio Code fazer o seguinte: eu tenho um arquivo, que é um scriptshell, que vai enviar diversas requisições para o nosso local host na porta 30000, que é onde foi definido nosso portal de notícias, e vou fazer isso enviando indefinidamente. 
 
-[06:27] E agora, como eu interrompi toda essa criação e envio de requisições, a ideia é que, aos poucos, ele vai voltar ao estado inicial de uma réplica, porque, todo o nosso recurso, que era cobrado, não precisa mais, porque não estamos mais enviando requisição, e ele vai voltar, automaticamente, para uma réplica.
+Só que para executarmos este script com SH, nós precisamos ter alguma ferramenta no Windows, que seja capaz de executá-la.
 
-[06:49] Então, reparem que já caiu aqui, ele atualizou o consumo para 53% e ele vai continuar nessa queda, até voltar para o 10%, que era o padrão dele, utilizando uma réplica, apenas.
+Nesse caso, eu vou utilizar o Git Bash. 
 
-[07:03] Então, o que conseguimos fazer: definindo, não o nosso arquivo de stress, mas, o nosso Horizontal Pod Autoescaler, nós definimos que queremos manter um consumo médio de 50% da CPU, que é requisitada por cada Pod, por cada container dentro do Pod.
+Então, vou deixar o link de download para vocês fazerem sem nenhum problema da ferramenta e para vocês poderem executar. 
 
-[07:21] Nesse caso, de 10 milicores, e sempre que ficarmos acima desse consumo, ele vai colocar mais Pods, tendo um limite de 10, como definimos, para que esse consumo seja ajustado.
+Eu vou acessar o nosso diretório, que é o nosso kubernetes-alura e para executar ele é bem simples.
 
-[07:37] Então, o máximo que chegamos foi três, mas, ele agora vai regredir, aos poucos, como não está recebendo mais nada, ele vai ficar abaixo desses 50%, que é a nossa média, e vai voltar para o estado inicial dele, que é de uma réplica, a aplicação está ociosa.
+Eu vou colocar SH, vou colocar o nome do nosso script, que é stress.sh, e eu preciso definir, ele recebe um parâmetro aqui, o nosso intervalo. Eu vou colocar de 0,001 segundos e, por fim, vou colocar para vermos a saída dele, para imprimirmos tudo certo neste arquivo de saída.
 
-[07:51] Então, por essa aula é só, por esse vídeo. Eu vou, agora, mostrar para o pessoal do Linux como vai ser a pequena diferença na questão do IP, que teremos que utilizar no nosso arquivo e, também, como vai funcionar no Minikube. Então, por esse vídeo aqui é só e eu vejo vocês no próximo e até mais!
+```
+sh stress.sh 0.001 > out.txt
+```
+
+Dou um "Enter" e ele vai começar a executar. 
+
+E para sermos mais gananciosos, eu vou abrir o outro Git Bash e vou fazer a mesma coisa, executar dois ao mesmo tempo. 
+
+Vou acessar o nosso kubernetes-alura e vou executar o SH também, no nosso stress.sh, a cada 0,0001 segundos e salvar em outro arquivo de saída.
+
+Agora, nós vamos observar no nosso PowerShell o que? 
+
+Eu vou colocar para analisarmos o nosso Horizontal Pod Autoescaler com o --watch e se nós repararmos ele já está com consumo de 30%, em relação ao alvo, e conforme esse consumo for subindo, nós vamos ver a mágica acontecer.
+
+Então, em algum momento, esse consumo vai ficar tão visível para o nosso Pod, para o nosso container, que nós vamos precisar criar mais Pods. 
+
+Eu já vou parar para irmos dando tempo dele voltar ao normal; nós tivemos um consumo que ele foi subindo, ficou 30%, e 30% ainda está abaixo do nosso alvo, ele continuou com um Pod, com uma réplica.
+
+Ficou em 100% ele viu que é melhor criar agora mais uma réplica e foi o que ele fez, então, ele se manteve e conforme a demanda foi subindo, ele viu que ainda estava longe do alvo, que era de 50%, e ele criou mais uma réplica.
+
+E agora, como eu interrompi toda essa criação e envio de requisições, a ideia é que, aos poucos, ele vai voltar ao estado inicial de uma réplica, porque, todo o nosso recurso, que era cobrado, não precisa mais, porque não estamos mais enviando requisição, e ele vai voltar, automaticamente, para uma réplica.
+
+Então, reparem que já caiu aqui, ele atualizou o consumo para 53% e ele vai continuar nessa queda, até voltar para o 10%, que era o padrão dele, utilizando uma réplica, apenas.
+
+Então, o que conseguimos fazer: 
+
+definindo, não o nosso arquivo de stress, mas, o nosso Horizontal Pod Autoescaler, nós definimos que queremos manter um consumo médio de 50% da CPU, que é requisitada por cada Pod, por cada container dentro do Pod.
+
+Nesse caso, de 10 milicores, e sempre que ficarmos acima desse consumo, ele vai colocar mais Pods, tendo um limite de 10, como definimos, para que esse consumo seja ajustado.
+
+Então, o máximo que chegamos foi três, mas, ele agora vai regredir, aos poucos, como não está recebendo mais nada, ele vai ficar abaixo desses 50%, que é a nossa média, e vai voltar para o estado inicial dele, que é de uma réplica, a aplicação está ociosa.
 
 ### Utilizando o HPA no linux
-[00:00] Assim como no Windows, nós também vamos precisar de um servidor de métricas no Linux. E o que ele é, caso você não tenha visto o vídeo anterior ou esteja relembrando agora?
+Assim como no Windows, nós também vamos precisar de um servidor de métricas no Linux. 
 
-[00:10] Ele nada mais é do que uma aplicação usada para fazer nossa escalabilidade horizontal em conjunto com o nosso Horizontal Pod Autoescaler, baseado no nosso consumo de CPU e memória.
+Ele nada mais é do que uma aplicação usada para fazer nossa escalabilidade horizontal em conjunto com o nosso Horizontal Pod Autoescaler, baseado no nosso consumo de CPU e memória.
 
-[00:22] Então, ele é o responsável por ser o servidor de métricas, o nome já diz. Ele vai ser responsável por servir essas informações para todos os nossos recursos dentro do nosso cluster.
+Então, ele é o responsável por ser o servidor de métricas, o nome já diz. 
 
-[00:34] E como fazemos para utilizar esse servidor de métricas? No Windows, nós precisamos utilizar esse arquivo de componentes descrito na documentação, que nós declaramos e definimos e aplicamos no nosso cluster. No caso no Linux, nós estamos utilizando o Minikube e ele, no Linux, tem diversas possibilidades para utilizarmos.
+Ele vai ser responsável por servir essas informações para todos os nossos recursos dentro do nosso cluster.
 
-[00:54] Como, por exemplo, se dermos uma olhada na documentação ele já tem uma parte voltada apenas para as extensões, então, se nós executarmos esse comando minikube addons list reparem o que ele vai nos mostrar. Ele mostra uma série de extensões que podemos utilizar e estão desabilitadas, a maioria.
+E como fazemos para utilizar esse servidor de métricas? 
 
-[01:17] Dentre elas, nós temos o servidor de métricas e para utilizar ele é bem simples, basta habilitá-lo com comando minikube addons enable metrics-server. E, a partir de agora, nós vamos ter isso habilitado, só que, antes de mais nada, antes de habilitarmos, eu vou mostrar para vocês que nós estamos com o mesmo estado que tínhamos no Windows.
+No Windows, nós precisamos utilizar esse arquivo de componentes descrito na documentação, que nós declaramos e definimos e aplicamos no nosso cluster. 
 
-[01:40] Nós temos os nossos Pods, das nossas aplicações, e temos também o nosso Horizontal Pod Autoescaler, já em execução com o arquivo que definimos. Então, agora vamos dar o nosso minikube addns enable metrics-server.
+No caso no Linux, nós estamos utilizando o Minikube e ele, no Linux, tem diversas possibilidades para utilizarmos.
 
-[01:58] E, agora, ele vai habilitar esse recurso para nós. Bem simples. O ponto agora é que assim que ele terminar de sincronizar, nós vamos ter o nosso alvo definido dentro do nosso cluster, quanto de consumo estamos tendo para os containers dos Pods desse Deployment.
+#### minikube addons list 
+Como, por exemplo, se dermos uma olhada na documentação ele já tem uma parte voltada apenas para as extensões, então, se nós executarmos esse comando 
 
-[02:16] E como não sabemos quanto tempo ele vai demorar para fazer essa sincronização, eu vou pausar o vídeo e quando ele começar a exibir os resultados, eu volto para nós seguirmos.
+```
+minikube addons list 
+```
 
-[02:25] Pessoal, então foi. Se eu executar o comando kubectl get hpa ele está utilizando 0% dos nossos 50% definido, da nossa média, e ele está utilizando uma réplica, que é o mais próximo que ele consegue manter dentro da nossa média de consumo de 50%, não tem como ele consumir de graça para ficar mais perto da nossa média.
+reparem o que ele vai nos mostrar. 
 
-[02:46] Então, o máximo que ele tem é 0% para ficar próximo dos nossos 50%, então, ele está usando só uma réplica. Então, o que vamos fazer agora? Vamos estressar a nossa aplicação e para gente utilizar, fazer esse estresse, eu tenho um arquivo que é o nosso stress.sh e nele precisamos definir o IP do nosso nó.
+Ele mostra uma série de extensões que podemos utilizar e estão desabilitadas, a maioria.
 
-[03:11] No caso da minha máquina, quando eu criei esse cluster com o Minikube, eu vou abrir uma nova aba do terminal, se dermos um kubectl get nodes –o wide foi aqui que ele definiu para nós esse IP no INTERNAL-IP 192.168.99.106.
+#### minikube addons enable metrics-server
+Dentre elas, nós temos o servidor de métricas (metrics-server) e para utilizar ele é bem simples, basta habilitá-lo com comando 
 
-[03:33] Então, é esse IP que vou colocar aqui na porta 30000, que é onde definimos que o nosso portal de notícias está em execução. Então, dito isso, temos o nosso script e vamos executá-lo.
+```
+minikube addons enable metrics-server
+```
 
-[03:46] Vou colocar o nosso bash e vou passar o nosso arquivo, o nosso script de estresse, para ele executar a cada 0.001 segundos, e vou salvar e sair do out.pxt.
+. E, a partir de agora, nós vamos ter isso habilitado, só que, antes de mais nada, antes de habilitarmos, eu vou mostrar para vocês que nós estamos com o mesmo estado que tínhamos no Windows.
 
-[04:01] Vamos ver a mágica acontecer. Ele vai começar a enviar diversas requisições e agora, no outro terminal (vou colocar os dois lado a lado) vou executar o kubectl get hpa --watch e nós vamos ver a mágica acontecer.
+Nós temos os nossos Pods, das nossas aplicações, e temos também o nosso Horizontal Pod Autoescaler, já em execução com o arquivo que definimos. 
 
-[04:19] Eu vou expandir o terminal direito mais um pouco, porque ele é mais relevante e nós vamos ver que ele está utilizando, até então, ainda um Pod, uma réplica dele, porque o consumo ainda está em 0%, mas, aos poucos ele vai começar a atualizar esse valor porque a nossa aplicação está recebendo diversas requisições, então, vamos ver os resultados acontecendo.
+Então, agora vamos dar o nosso minikube addons enable metrics-server.
 
-[04:41] E o que ele vai fazer? Será que ele vai criar muitos Pods a mais para manter esse consumo médio em 50%? Vamos dar uma pausa no vídeo e assim que ele começar a exibir os resultados voltamos para analisar.
+E, agora, ele vai habilitar esse recurso para nós. 
 
-[04:57] O que aconteceu foi que as requisições pararam de ser enviadas (vou maximizar esse segundo terminal à direita, clicando e arrastando com o mouse na extremidade esquerda da tela deste terminal).
+Bem simples. 
 
-[05:02] Ele começou a enviar tantas requisições e o consumo foi ficando tão acima da nossa média esperada de 50% em TARGETS, ficando na faixa de 500%, por exemplo, que ele foi precisando criar mais e mais réplicas, até chegar ao nosso limite de 10, onde ele não pôde mais passar, porque esse era o nosso máximo.
+O ponto agora é que assim que ele terminar de sincronizar, nós vamos ter o nosso alvo definido dentro do nosso cluster, quanto de consumo estamos tendo para os containers dos Pods desse Deployment.
 
-[05:20] E, a partir daí, como no nosso outro terminal eu já parei de enviar as requisições, ele vai passar a diminuir esses recursos.
+Se eu executar o comando kubectl get hpa ele está utilizando 0% dos nossos 50% definido, da nossa média, e ele está utilizando uma réplica, que é o mais próximo que ele consegue manter dentro da nossa média de consumo de 50%, não tem como ele consumir de graça para ficar mais perto da nossa média.
 
-[05:30] Porque como eles não estão sendo mais utilizados da mesma maneira de antes, reparem que ele já caiu pra 5%, a ideia é que ele vai começar a diminuir, aos poucos, o número de Pods que estão em execução, para não ficar nenhum Pod ocioso ali, para manter tudo da maneira mais básica possível.
+Então, o máximo que ele tem é 0% para ficar próximo dos nossos 50%, então, ele está usando só uma réplica. 
 
-[05:49] Então, mais uma vez, como agora paramos de enviar as requisições e não sabemos o tempo que ele vai demorar para atualizar, eu vou pausar o vídeo, de novo, para assim que ele voltar e tivermos um resultado mais enxuto, de quantos Pods ele está utilizando, eu volto para analisarmos.
+Então, o que vamos fazer agora? 
 
-[06:09] E voltamos ao nosso estado inicial de um Pod, apenas, porque nosso consumo voltou para 0%. Perfeito, pessoal!
+Vamos estressar a nossa aplicação e para gente utilizar, fazer esse estresse, eu tenho um arquivo que é o nosso stress.sh e nele precisamos definir o IP do nosso nó.
 
-[06:17] Então, agora o que conseguimos fazer, tanto no Windows quanto no Linux, nós conseguimos definir, automaticamente, critérios para que nosso cluster consiga automatizar se ele vai colocar mais ou menos Pods conforme o consumo de recursos que nós temos.
+No caso da minha máquina, quando eu criei esse cluster com o Minikube, eu vou abrir uma nova aba do terminal, se dermos um 
 
-[06:35] E isso de maneira bem simples e fácil, através de um arquivo de definição. Então, nós vamos terminar essa aula agora, onde nós vimos como definir um Horizontal Pod Autoescaler e utilizar um Servidor de Métricas tanto no Windows quanto no Linux e eu vejo vocês no próximo vídeo. Até lá!
+```
+kubectl get nodes –o wide 
+```
+
+foi aqui que ele definiu para nós esse IP no INTERNAL-IP 192.168.99.106.
+
+Então, é esse IP que vou colocar aqui na porta 30000, que é onde definimos que o nosso portal de notícias está em execução. 
+
+```
+#!/bin/bash
+for i in {1..10000}; do
+  curl 192.168.99.106:<30000>
+  sleep $1
+done
+```
+
+Então, dito isso, temos o nosso script e vamos executá-lo.
+
+Vou colocar o nosso bash e vou passar o nosso arquivo, o nosso script de estresse, para ele executar a cada 0.001 segundos, e vou salvar e sair do out.pxt.
+
+```
+bash stress.sh 0.001 > out.txt
+```
+
+Ele vai começar a enviar diversas requisições e agora, no outro terminal (vou colocar os dois lado a lado) vou executar o kubectl get hpa --watch.
+
+nós vamos ver que ele está utilizando, até então, ainda um Pod, uma réplica dele, porque o consumo ainda está em 0%, mas, aos poucos ele vai começar a atualizar esse valor porque a nossa aplicação está recebendo diversas requisições, então, vamos ver os resultados acontecendo.
+
+E o que ele vai fazer? 
+
+Será que ele vai criar muitos Pods a mais para manter esse consumo médio em 50%? 
+
+O que aconteceu foi que as requisições pararam de ser enviadas (vou maximizar esse segundo terminal à direita, clicando e arrastando com o mouse na extremidade esquerda da tela deste terminal).
+
+Ele começou a enviar tantas requisições e o consumo foi ficando tão acima da nossa média esperada de 50% em TARGETS, ficando na faixa de 500%, por exemplo, que ele foi precisando criar mais e mais réplicas, até chegar ao nosso limite de 10, onde ele não pôde mais passar, porque esse era o nosso máximo.
+
+E, a partir daí, como no nosso outro terminal eu já parei de enviar as requisições, ele vai passar a diminuir esses recursos.
+
+Porque como eles não estão sendo mais utilizados da mesma maneira de antes, reparem que ele já caiu pra 5%, a ideia é que ele vai começar a diminuir, aos poucos, o número de Pods que estão em execução, para não ficar nenhum Pod ocioso ali, para manter tudo da maneira mais básica possível.
+
+E voltamos ao nosso estado inicial de um Pod, apenas, porque nosso consumo voltou para 0%. 
+
+Perfeito, pessoal!
+
+Então, agora o que conseguimos fazer, tanto no Windows quanto no Linux, nós conseguimos definir, automaticamente, critérios para que nosso cluster consiga automatizar se ele vai colocar mais ou menos Pods conforme o consumo de recursos que nós temos.
+
+E isso de maneira bem simples e fácil, através de um arquivo de definição. 
+
+### Para saber mais: VerticalPodAutoscaler
+Além do HorizontalPodAutoscaler, o Kubernetes possui um recurso customizado chamado VerticalPodAutoscaler. O VerticalPodAutoscaler remove a necessidade de definir limites e pedidos por recursos do sistema, como cpu e memória. Quando definido, ele define os consumos de maneira automática baseada na utilização em cada um dos nós, além disso, quanto tem disponível ainda de recurso.
+
+Algumas configurações extras são necessárias para utilizar o VerticalPodAutoscaler. Mais informações podem ser obtidas nesse (link)[https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler].
+
+Também podemos ver mais informações específicas sobre diferentes Cloud Providers, como o GCP e a AWS.
+
+### o que aprendemos?
+* reiniciar a aplicaçao incessantemente atraves de replicaSets/Deployments nem sempre resolvera o problema
+* horizontalPodAutoscalers sao responsaveis por definir em quais circunstancias escalaremos nossa aplicaçao automaticamente
+* como definir o uso de recursos de cada container em um pod
+* o que é, e como utilizar um servidor de metricas
+* como utilizar um HorizontalPodAutoscaler atraves de arquivos de definiçao
+

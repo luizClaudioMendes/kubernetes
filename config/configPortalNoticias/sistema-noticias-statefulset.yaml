@@ -18,6 +18,32 @@ spec:
           envFrom:
             - configMapRef:
               name: sistema-configmap
+          volumeMounts:
+            - name: imagens
+              mountPath: /var/www/html/uploads
+            - name: sessao
+              mountPath: /tmp
+          livenessProbe:
+              httpGet:
+                path: /
+                port: 80
+              periodoSeconds: 10
+              failureThreshold: 3
+              initialDelaySeconds: 20
+          readinessProbe:
+              httpGet:
+                path: /inserir_noticias.php
+                port: 80
+              periodoSeconds: 10
+              failureThreshold: 5
+              initialDelaySeconds: 3
+      volumes:
+        - name: imagens
+          persistentVolumeClaim:
+            claimName: imagens-pvc
+        - name: sessao
+          persistentVolumeClaim:
+            claimName: sessao-pvc
   selector:
     matchLabels:
       app: sistema-noticias
